@@ -1,0 +1,6 @@
+{
+  "name": "Banquero de Mesa",
+  "description": "Virtual banking companion for tourist board games (FM) with AI Banker, custom wallets, custom bills, surprise cards, and transaction logs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
