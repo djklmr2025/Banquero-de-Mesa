@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.squareup.moshi.Moshi
+import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -89,6 +90,73 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     init {
         // Prepare initial states with the default "disney" mode
         selectGameMode("disney")
+
+        // Sync state to Firebase Realtime Database in real-time
+        viewModelScope.launch(Dispatchers.IO) {
+            _gameState.collect { state ->
+                if (state.isStarted) {
+                    try {
+                        val database = FirebaseDatabase.getInstance()
+                        val reference = database.getReference("game_session")
+                        
+                        val stateMap = mapOf(
+                            "isStarted" to state.isStarted,
+                            "selectedMode" to state.selectedMode,
+                            "bankBalance" to state.bankBalance,
+                            "dice1" to state.dice1,
+                            "dice2" to state.dice2,
+                            "isDiceRolling" to state.isDiceRolling,
+                            "players" to state.players.map { player ->
+                                mapOf(
+                                    "id" to player.id,
+                                    "name" to player.name,
+                                    "balance" to player.balance,
+                                    "color" to player.color,
+                                    "avatarEmoji" to player.avatarEmoji
+                                )
+                            },
+                            "transactions" to state.transactions.map { tx ->
+                                mapOf(
+                                    "id" to tx.id,
+                                    "timestamp" to tx.timestamp,
+                                    "fromPlayerId" to tx.fromPlayerId,
+                                    "fromPlayerName" to tx.fromPlayerName,
+                                    "toPlayerId" to tx.toPlayerId,
+                                    "toPlayerName" to tx.toPlayerName,
+                                    "amount" to tx.amount,
+                                    "concept" to tx.concept,
+                                    "isAiProcessed" to tx.isAiProcessed
+                                )
+                            },
+                            "properties" to state.properties.map { prop ->
+                                mapOf(
+                                    "id" to prop.id,
+                                    "name" to prop.name,
+                                    "groupColor" to prop.groupColor,
+                                    "groupName" to prop.groupName,
+                                    "cost" to prop.cost,
+                                    "mortgageValue" to prop.mortgageValue,
+                                    "baseRent" to prop.baseRent,
+                                    "rentWithBlock" to prop.rentWithBlock,
+                                    "rentWith1House" to prop.rentWith1House,
+                                    "rentWith2Houses" to prop.rentWith2Houses,
+                                    "rentWith3Houses" to prop.rentWith3Houses,
+                                    "rentWith4Houses" to prop.rentWith4Houses,
+                                    "rentWithCastle" to prop.rentWithCastle,
+                                    "houseCost" to prop.houseCost,
+                                    "numHouses" to prop.numHouses,
+                                    "isMortgaged" to prop.isMortgaged,
+                                    "ownerId" to prop.ownerId
+                                )
+                            }
+                        )
+                        reference.setValue(stateMap)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
     }
 
     fun navigateTo(screen: String) {

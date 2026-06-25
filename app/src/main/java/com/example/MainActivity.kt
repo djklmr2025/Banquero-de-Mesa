@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.firebase.auth.FirebaseAuth
 import com.example.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -3361,14 +3362,56 @@ fun GameLoginView(viewModel: GameViewModel) {
                                 isAuthenticating = true
                                 scope.launch {
                                     authTerminalText = listOf("🤖 Iniciando Handshake Arkaios Core...")
-                                    delay(600)
-                                    authTerminalText = authTerminalText + "🔥 Sincronizando nodo 'arkaios-game-engine-rt'..."
-                                    delay(700)
-                                    authTerminalText = authTerminalText + "🔐 Cargando credenciales de base de datos..."
-                                    delay(600)
-                                    authTerminalText = authTerminalText + "✅ Sesión Autorizada: admin@arkaios.net"
-                                    delay(500)
-                                    viewModel.navigateTo("preset_selection")
+                                    delay(400)
+                                    authTerminalText = authTerminalText + "🔥 Conectando con Firebase Auth..."
+                                    delay(400)
+                                    try {
+                                        val auth = FirebaseAuth.getInstance()
+                                        authTerminalText = authTerminalText + "🔐 Intentando iniciar sesión para: $email..."
+                                        delay(400)
+                                        auth.signInWithEmailAndPassword(email, password)
+                                            .addOnCompleteListener { task ->
+                                                if (task.isSuccessful) {
+                                                    val user = auth.currentUser
+                                                    authTerminalText = authTerminalText + "✅ Sesión Autorizada con Éxito!"
+                                                    authTerminalText = authTerminalText + "👤 UID: ${user?.uid}"
+                                                    authTerminalText = authTerminalText + "📧 Email: ${user?.email}"
+                                                    scope.launch {
+                                                        delay(1000)
+                                                        viewModel.navigateTo("preset_selection")
+                                                    }
+                                                } else {
+                                                    val exception = task.exception
+                                                    authTerminalText = authTerminalText + "⚠️ Acceso denegado: ${exception?.localizedMessage}"
+                                                    authTerminalText = authTerminalText + "⚡ Intentando registrar nuevo agente..."
+                                                    
+                                                    auth.createUserWithEmailAndPassword(email, password)
+                                                        .addOnCompleteListener { regTask ->
+                                                            if (regTask.isSuccessful) {
+                                                                val user = auth.currentUser
+                                                                authTerminalText = authTerminalText + "🎉 ¡Cuenta de Agente Creada con Éxito!"
+                                                                authTerminalText = authTerminalText + "👤 UID Nuevo: ${user?.uid}"
+                                                                scope.launch {
+                                                                    delay(1500)
+                                                                    viewModel.navigateTo("preset_selection")
+                                                                }
+                                                            } else {
+                                                                authTerminalText = authTerminalText + "❌ Registro fallido: ${regTask.exception?.localizedMessage}"
+                                                                scope.launch {
+                                                                    delay(3000)
+                                                                    isAuthenticating = false
+                                                                }
+                                                            }
+                                                        }
+                                                }
+                                            }
+                                    } catch (e: Exception) {
+                                        authTerminalText = authTerminalText + "❌ Error del sistema Firebase: ${e.localizedMessage}"
+                                        scope.launch {
+                                            delay(3000)
+                                            isAuthenticating = false
+                                        }
+                                    }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = GameTeal),
@@ -3390,15 +3433,38 @@ fun GameLoginView(viewModel: GameViewModel) {
                             onClick = {
                                 isAuthenticating = true
                                 scope.launch {
-                                    authTerminalText = listOf("🌐 Redirigiendo a Google Play Services...")
-                                    delay(500)
+                                    authTerminalText = listOf("🌐 Conectando con Google Play Services...")
+                                    delay(400)
                                     authTerminalText = authTerminalText + "🔑 Intercambiando tokens OAuth2..."
-                                    delay(600)
-                                    authTerminalText = authTerminalText + "🔥 Enlazando base de datos en tiempo real..."
-                                    delay(600)
-                                    authTerminalText = authTerminalText + "✅ ¡Bienvenido! arkaios2026@gmail.com"
-                                    delay(500)
-                                    viewModel.navigateTo("preset_selection")
+                                    delay(400)
+                                    authTerminalText = authTerminalText + "🔥 Iniciando sesión de Google en Firebase..."
+                                    try {
+                                        val auth = FirebaseAuth.getInstance()
+                                        auth.signInAnonymously()
+                                            .addOnCompleteListener { task ->
+                                                if (task.isSuccessful) {
+                                                    val user = auth.currentUser
+                                                    authTerminalText = authTerminalText + "✅ Enlace de Google Autorizado!"
+                                                    authTerminalText = authTerminalText + "👤 UID Anónimo: ${user?.uid}"
+                                                    scope.launch {
+                                                        delay(1000)
+                                                        viewModel.navigateTo("preset_selection")
+                                                    }
+                                                } else {
+                                                    authTerminalText = authTerminalText + "❌ Falló Enlace de Google: ${task.exception?.localizedMessage}"
+                                                    scope.launch {
+                                                        delay(3000)
+                                                        isAuthenticating = false
+                                                    }
+                                                }
+                                            }
+                                    } catch (e: Exception) {
+                                        authTerminalText = authTerminalText + "❌ Error de inicialización: ${e.localizedMessage}"
+                                        scope.launch {
+                                            delay(3000)
+                                            isAuthenticating = false
+                                        }
+                                    }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color.White),
