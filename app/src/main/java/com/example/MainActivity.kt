@@ -3451,19 +3451,13 @@ fun GameLoginView(viewModel: GameViewModel) {
                                                         viewModel.navigateTo("preset_selection")
                                                     }
                                                 } else {
-                                                    authTerminalText = authTerminalText + "❌ Falló Enlace de Google: ${task.exception?.localizedMessage}"
-                                                    scope.launch {
-                                                        delay(3000)
-                                                        isAuthenticating = false
-                                                    }
+                                                    val errorMsg = task.exception?.localizedMessage ?: "Error desconocido"
+                                                    authTerminalText = authTerminalText + "❌ Falló Enlace de Google: $errorMsg"
+                                                    authTerminalText = authTerminalText + "💡 Consejo: Activa 'Anonymous Authentication' en Firebase Console o ingresa en Modo Offline."
                                                 }
                                             }
                                     } catch (e: Exception) {
                                         authTerminalText = authTerminalText + "❌ Error de inicialización: ${e.localizedMessage}"
-                                        scope.launch {
-                                            delay(3000)
-                                            isAuthenticating = false
-                                        }
                                     }
                                 }
                             },
@@ -3487,6 +3481,33 @@ fun GameLoginView(viewModel: GameViewModel) {
                                 )
                             }
                         }
+
+                        // Guest / Offline Mode Bypass Button
+                        Button(
+                            onClick = {
+                                viewModel.navigateTo("preset_selection")
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .border(1.dp, GameTeal.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text("🎮 ", fontSize = 14.sp)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "MODO INVITADO (SIN CONEXIÓN)",
+                                    color = GameTeal,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
                     }
                 }
             } else {
@@ -3496,7 +3517,7 @@ fun GameLoginView(viewModel: GameViewModel) {
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(240.dp)
+                        .height(260.dp)
                         .border(1.dp, GameTeal, RoundedCornerShape(16.dp))
                 ) {
                     Column(
@@ -3523,20 +3544,48 @@ fun GameLoginView(viewModel: GameViewModel) {
                             }
                         }
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            CircularProgressIndicator(
-                                color = GameTeal,
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp
-                            )
-                            Text(
-                                text = "Estableciendo conexión en la nube...",
-                                color = TextMuted,
-                                fontSize = 11.sp
-                            )
+                        val hasError = authTerminalText.any { it.contains("❌") || it.contains("⚠️") }
+                        if (hasError) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { isAuthenticating = false },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("REGRESAR ↩️", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Button(
+                                    onClick = { 
+                                        isAuthenticating = false
+                                        viewModel.navigateTo("preset_selection") 
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = GameTeal),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.weight(1.3f)
+                                ) {
+                                    Text("OMITIR (OFFLINE) 🎮", color = GameNavyDark, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        } else {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    color = GameTeal,
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                Text(
+                                    text = "Estableciendo conexión en la nube...",
+                                    color = TextMuted,
+                                    fontSize = 11.sp
+                                )
+                            }
                         }
                     }
                 }
