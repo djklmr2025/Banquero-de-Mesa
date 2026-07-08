@@ -90,7 +90,7 @@ fun MainScreenContent(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             if (currentScreen != "login" && currentScreen != "preset_selection") {
-                HeaderAppBar()
+                HeaderAppBar(viewModel = viewModel)
             }
             
             Crossfade(
@@ -103,6 +103,7 @@ fun MainScreenContent(
                     "preset_selection" -> GamePresetSelectionView(viewModel = viewModel)
                     "setup" -> GameSetupView(viewModel = viewModel)
                     "dashboard" -> GameDashboardView(viewModel = viewModel)
+                    "bills_config" -> GameBillsConfigView(viewModel = viewModel)
                 }
             }
         }
@@ -126,7 +127,7 @@ fun MainScreenContent(
 }
 
 @Composable
-fun HeaderAppBar() {
+fun HeaderAppBar(viewModel: GameViewModel) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -216,6 +217,15 @@ fun HeaderAppBar() {
                     fontWeight = FontWeight.Bold
                 )
             }
+        }
+
+        // Shortcut to the visual bill designer (Creator Studio)
+        IconButton(onClick = { viewModel.navigateTo("bills_config") }) {
+            Icon(
+                imageVector = Icons.Filled.Palette,
+                contentDescription = "Diseñar billetes",
+                tint = Color(0xFF6750A4)
+            )
         }
     }
 }
