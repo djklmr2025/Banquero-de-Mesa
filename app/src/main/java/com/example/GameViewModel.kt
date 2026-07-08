@@ -326,6 +326,44 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _gameState.update { it.copy(bills = updated) }
     }
 
+    // --- CREATOR STUDIO: BILL EDITOR ---
+
+    fun addBillTemplate(
+        denomination: Long,
+        colorHex: Int,
+        iconName: String,
+        label: String,
+        isCoin: Boolean,
+        frontDesignText: String,
+        backDesignText: String,
+        patternType: String,
+        frontIcon: String,
+        backIcon: String
+    ) {
+        val newBill = BillTemplate(
+            id = "bill_custom_${'$'}{UUID.randomUUID()}",
+            denomination = denomination,
+            colorHex = colorHex,
+            iconName = iconName,
+            label = label,
+            isCoin = isCoin,
+            frontDesignText = frontDesignText,
+            backDesignText = backDesignText,
+            patternType = patternType,
+            frontIcon = frontIcon,
+            backIcon = backIcon
+        )
+        val updated = billTemplates.value + newBill
+        billTemplates.value = updated
+        _gameState.update { it.copy(bills = updated) }
+    }
+
+    fun removeBillTemplate(billId: String) {
+        val updated = billTemplates.value.filter { it.id != billId }
+        billTemplates.value = updated
+        _gameState.update { it.copy(bills = updated) }
+    }
+
     fun getInitialProperties(mode: String): List<BoardProperty> {
         return when (mode) {
             "disney" -> {
