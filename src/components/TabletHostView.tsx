@@ -544,11 +544,11 @@ export const TabletHostView: React.FC<TabletHostViewProps> = ({
             {/* QR Code Card */}
             <div className="flex flex-col items-center justify-center bg-white p-6 rounded-2xl shadow-inner gap-3">
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=6&data=${encodeURIComponent(
-                  typeof window !== 'undefined' ? `${window.location.origin}?room=${roomState.roomId}` : `https://banquero-fm.web.app?room=${roomState.roomId}`
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(
+                  typeof window !== 'undefined' ? `${window.location.origin}?room=${roomState.roomId}&view=wallet` : `https://banquero-de-mesa.vercel.app?room=${roomState.roomId}&view=wallet`
                 )}`}
                 alt="Código QR de Conexión de Sala"
-                className="w-48 h-48 rounded-lg shadow-sm"
+                className="w-52 h-52 rounded-xl shadow-sm"
               />
               <div className="text-center">
                 <span className="text-[10px] uppercase tracking-widest font-black text-slate-500 block">PIN Directo de Sala</span>

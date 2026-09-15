@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: banquero-de-mesa
+    runtime: static
+    buildCommand: npm run build
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Access-Control-Allow-Origin
+        value: "*"
+    routes:
+      - type: rewrite
+        source: /wallet
+        destination: /wallet.html
+      - type: rewrite
+        source: /tablet
+        destination: /tablet.html
+      - type: rewrite
+        source: /studio
+        destination: /studio.html

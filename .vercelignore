@@ -1,0 +1,8 @@
+.gradle/
+.kotlin/
+releases/
+app/
+build/
+dist/
+*.keystore
+node_modules/

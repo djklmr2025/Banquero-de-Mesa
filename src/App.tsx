@@ -84,7 +84,23 @@ const INITIAL_ROOM_STATE: RoomState = {
 };
 
 export const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'host' | 'player' | 'studio'>('host');
+  const getInitialView = (): 'host' | 'player' | 'studio' => {
+    if (typeof window === 'undefined') return 'host';
+    const path = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get('view')?.toLowerCase();
+
+    if (path.includes('wallet') || hash.includes('wallet') || viewParam === 'wallet' || viewParam === 'player') {
+      return 'player';
+    }
+    if (path.includes('studio') || hash.includes('studio') || viewParam === 'studio') {
+      return 'studio';
+    }
+    return 'host';
+  };
+
+  const [currentView, setCurrentView] = useState<'host' | 'player' | 'studio'>(getInitialView);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('p1');
   const [roomState, setRoomState] = useState<RoomState>(() => {
     const saved = localStorage.getItem('banquero_room_FM-77');
