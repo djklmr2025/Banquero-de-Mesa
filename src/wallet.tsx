@@ -56,12 +56,12 @@ export const StandaloneWalletApp: React.FC = () => {
       name,
       avatar,
       color: colors[roomState.players.length % colors.length],
-      balance: roomState.settings.initialBalance,
+      balance: roomState.settings.initialBalance || 0,
       position: 0,
       inJail: false,
       jailTurns: 0,
       properties: [],
-      bills: { 500: 4, 1000: 3, 2000: 2, 5000: 1 }
+      bills: roomState.settings.initialBalance > 0 ? { 500: 4, 1000: 3, 2000: 2, 5000: 1 } : {}
     };
     const updatedState = { ...roomState, players: [...roomState.players, newP] };
     handleUpdateRoom(updatedState);

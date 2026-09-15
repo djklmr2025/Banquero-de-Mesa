@@ -80,9 +80,14 @@ export const PlayerPocketWallet: React.FC<PlayerPocketWalletProps> = ({
           <span className="font-bold text-sm text-white truncate max-w-[120px]">{player.name}</span>
         </div>
 
-        <span className="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2 py-1 rounded-md border border-amber-500/30">
-          PIN: {roomState.roomId}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-mono bg-slate-800 text-amber-300 px-2 py-1 rounded-md border border-slate-700 font-bold">
+            Ronda #{roomState.roundNumber}{roomState.settings.maxRounds && roomState.settings.maxRounds > 0 ? `/${roomState.settings.maxRounds}` : ''}
+          </span>
+          <span className="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2 py-1 rounded-md border border-amber-500/30 font-bold">
+            PIN: {roomState.roomId}
+          </span>
+        </div>
       </header>
 
       {/* Main Balance Card (Digital Wallet Style) */}

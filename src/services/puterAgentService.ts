@@ -44,7 +44,7 @@ export class PuterBankerAgent {
 
   // 1. Banker AI Commentary Generator
   async generateCommentary(
-    event: 'PASS_GO' | 'PAY_RENT' | 'BUY_PROPERTY' | 'GO_TO_JAIL' | 'CARD_DRAWN' | 'BANKRUPT' | 'DICE_DOUBLE' | 'GAME_START',
+    event: 'PASS_GO' | 'PAY_RENT' | 'BUY_PROPERTY' | 'GO_TO_JAIL' | 'CARD_DRAWN' | 'BANKRUPT' | 'DICE_DOUBLE' | 'GAME_START' | 'ROUND_END' | 'GAME_WON',
     context: {
       player: Player;
       targetPlayer?: Player;
@@ -52,6 +52,8 @@ export class PuterBankerAgent {
       propertyName?: string;
       card?: SurpriseCard;
       dice?: [number, number];
+      roundNumber?: number;
+      totalWorth?: number;
     }
   ): Promise<BankerDialogue> {
     const defaultPhrases: Record<string, string[]> = {
@@ -87,8 +89,17 @@ export class PuterBankerAgent {
         `¡DOBLES! ¡${context.player.name} sacó dados gemelos (${context.dice?.[0]} y ${context.dice?.[1]})! Tira de nuevo, pero cuidado con sacar tres seguidos o vas al tambo.`,
         `¡Racha de suerte! Dados dobles para ${context.player.name}. ¡Tienes turno extra!`
       ],
+      ROUND_END: [
+        `¡Ronda concluida! Todos completaron su turno y ${context.player.name} va a la cabeza con $${context.player.balance.toLocaleString()}. ¡Comienza la siguiente ronda!`,
+        `¡Cambio de ronda en el tablero! La mesa está en movimiento y ${context.player.name} lidera las finanzas. ¡A rodar esos dados!`,
+        `¡Vuelta general a la mesa! El banquero audita las cuentas: ${context.player.name} va al frente. ¡Nadie tiene la victoria asegurada!`
+      ],
+      GAME_WON: [
+        `¡TENEMOS UN GRAN CAMPEÓN! Se han completado las rondas pactadas y ${context.player.name} se corona con un patrimonio glorioso de $${context.totalWorth?.toLocaleString() || context.player.balance.toLocaleString()}. ¡Una ovación de pie!`,
+        `¡FIN DE LA PARTIDA! ${context.player.name} es el nuevo magnate supremo de Fotorama. ¡El banco le rinde homenaje con honores!`
+      ],
       GAME_START: [
-        `¡Bienvenidos al Banquero de Mesa de Fotorama! Soy su Banquero Inteligente y Árbitro Oficial. ¡Que rueden los dados y que gane el más hábil!`,
+        `¡Bienvenidos al Banquero de Mesa de Fotorama! Soy su Banquero Inteligente y Árbitro Oficial. Edición de cuentas bloqueada. ¡Que rueden los dados y que gane el más hábil!`,
         `¡La mesa está servida! El Banco abre sus bóvedas con 100% de liquidez. ¡Jugadores, a sus posiciones!`
       ]
     };
@@ -102,7 +113,9 @@ export class PuterBankerAgent {
         const prompt = `Eres el "Banquero Inteligente" de un juego de mesa de mesa familiar (estilo Fotorama / Monopoly moderno).
 Tu personalidad es alegre, un poco sarcástica, carismática y emocionante como un presentador de televisión mexicano.
 Evento del juego: ${event}
-Jugador: ${context.player.name} (Saldo: $${context.player.balance})
+${context.roundNumber ? `Ronda número: ${context.roundNumber}` : ''}
+Jugador destacado: ${context.player.name} (Saldo: $${context.player.balance})
+${context.totalWorth ? `Patrimonio total calculado: $${context.totalWorth}` : ''}
 ${context.targetPlayer ? `Rival afectado: ${context.targetPlayer.name}` : ''}
 ${context.amount ? `Monto en juego: $${context.amount}` : ''}
 ${context.propertyName ? `Propiedad: ${context.propertyName}` : ''}

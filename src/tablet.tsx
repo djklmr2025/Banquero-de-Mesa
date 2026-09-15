@@ -21,65 +21,67 @@ const INITIAL_ROOM_STATE: RoomState = {
       name: 'Juan (Host)',
       avatar: '🎩',
       color: '#F59E0B',
-      balance: 15000,
+      balance: 0,
       position: 0,
       inJail: false,
       jailTurns: 0,
-      properties: ['prop_1'],
-      bills: { 500: 4, 1000: 3, 2000: 2, 5000: 1 }
+      properties: [],
+      bills: {}
     },
     {
       id: 'p2',
       name: 'Sofía',
       avatar: '🏎️',
       color: '#EC4899',
-      balance: 15000,
+      balance: 0,
       position: 0,
       inJail: false,
       jailTurns: 0,
-      properties: ['prop_3'],
-      bills: { 500: 4, 1000: 3, 2000: 2, 5000: 1 }
+      properties: [],
+      bills: {}
     },
     {
       id: 'p3',
       name: 'Mateo',
       avatar: '🚀',
       color: '#3B82F6',
-      balance: 15000,
+      balance: 0,
       position: 0,
       inJail: false,
       jailTurns: 0,
       properties: [],
-      bills: { 500: 4, 1000: 3, 2000: 2, 5000: 1 }
+      bills: {}
     },
     {
       id: 'p4',
       name: 'Valentina',
       avatar: '👑',
       color: '#10B981',
-      balance: 15000,
+      balance: 0,
       position: 0,
       inJail: false,
       jailTurns: 0,
-      properties: ['prop_5'],
-      bills: { 500: 4, 1000: 3, 2000: 2, 5000: 1 }
+      properties: [],
+      bills: {}
     }
   ],
   properties: DEFAULT_PROPERTIES,
   history: [],
   lastDialogue: {
     id: 'diag_init',
-    text: '¡El Banco Central Fotorama está listo con liquidez total! Turno de Juan para lanzar los dados.',
+    text: '¡El Banco Central Fotorama está listo! Configura los jugadores o inicia la partida con edición bloqueada.',
     mood: 'celebratory',
     timestamp: Date.now()
   },
   settings: {
     passGoSalary: 20000,
-    initialBalance: 15000,
+    initialBalance: 0,
     currencySymbol: '$',
     currencyName: 'Pesos FM',
     aiCommentaryEnabled: true,
-    voiceEnabled: true
+    voiceEnabled: true,
+    gameStatus: 'setup',
+    maxRounds: 10
   }
 };
 
@@ -89,7 +91,25 @@ export const StandaloneTabletApp: React.FC = () => {
     const saved = localStorage.getItem('banquero_room_FM-77');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed.settings && (parsed.settings.initialBalance === 15000 || parsed.settings.gameStatus === undefined)) {
+          return {
+            ...parsed,
+            players: parsed.players.map((p: any) => ({
+              ...p,
+              balance: p.balance === 15000 ? 0 : p.balance,
+              properties: p.properties || [],
+              bills: p.balance === 15000 ? {} : (p.bills || {})
+            })),
+            settings: {
+              ...parsed.settings,
+              initialBalance: parsed.settings.initialBalance === 15000 ? 0 : parsed.settings.initialBalance,
+              gameStatus: parsed.settings.gameStatus || 'setup',
+              maxRounds: parsed.settings.maxRounds || 10
+            }
+          };
+        }
+        return parsed;
       } catch {
         return INITIAL_ROOM_STATE;
       }

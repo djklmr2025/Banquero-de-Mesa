@@ -80,6 +80,8 @@ export interface RoomState {
     currencyName: string;
     aiCommentaryEnabled: boolean;
     voiceEnabled: boolean;
+    gameStatus?: 'setup' | 'playing' | 'ended';
+    maxRounds?: number; // 0 = ilimitado, > 0 = límite de rondas
   };
 }
 

@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { 
   Dices, Volume2, VolumeX, Sparkles, Building, ArrowRight, RotateCcw, 
-  Send, AlertTriangle, CheckCircle, Smartphone, Bot, QrCode, Camera, X, UserPlus
+  Send, AlertTriangle, CheckCircle, Smartphone, Bot, QrCode, Camera, X, UserPlus,
+  SlidersHorizontal, Lock, Play, Trophy
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { BankerDialogue, Player, RoomState, SurpriseCard } from '../types/game';
 import { soundFx } from '../services/soundService';
 import { puterBanker } from '../services/puterAgentService';
+import { PreGameSetupModal } from './PreGameSetupModal';
+import { GameOverModal } from './GameOverModal';
 
 interface TabletHostViewProps {
   roomState: RoomState;
@@ -26,6 +29,10 @@ export const TabletHostView: React.FC<TabletHostViewProps> = ({
   const [isThinkingAI, setIsThinkingAI] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
+
+  const isGamePlaying = roomState.settings.gameStatus === 'playing';
+  const isGameEnded = roomState.settings.gameStatus === 'ended';
 
   const currentPlayer = roomState.players.find(p => p.id === roomState.currentTurnPlayerId) || roomState.players[0];
 
@@ -110,12 +117,54 @@ export const TabletHostView: React.FC<TabletHostViewProps> = ({
     }, 600);
   };
 
-  // Pass turn to next player
-  const handleNextTurn = () => {
+  // Pass turn to next player with intelligent round counting
+  const handleNextTurn = async () => {
     const currentIndex = roomState.players.findIndex(p => p.id === currentPlayer.id);
     const nextIndex = (currentIndex + 1) % roomState.players.length;
     const nextPlayer = roomState.players[nextIndex];
-    const newRound = nextIndex === 0 ? roomState.roundNumber + 1 : roomState.roundNumber;
+    const isCompletingRound = nextIndex === 0;
+    const newRound = isCompletingRound ? roomState.roundNumber + 1 : roomState.roundNumber;
+
+    // Check if max rounds limit has been reached!
+    if (
+      isCompletingRound && 
+      roomState.settings.maxRounds && 
+      roomState.settings.maxRounds > 0 && 
+      roomState.roundNumber >= roomState.settings.maxRounds
+    ) {
+      soundFx.playPassGo();
+      confetti({ particleCount: 120, spread: 100, origin: { y: 0.5 } });
+
+      // Calculate leader by net worth
+      const propPriceMap: Record<string, number> = {};
+      roomState.properties.forEach(p => { propPriceMap[p.id] = p.price; });
+      const sorted = [...roomState.players].sort((a, b) => {
+        const worthA = a.balance + a.properties.reduce((s, id) => s + (propPriceMap[id] || 0), 0);
+        const worthB = b.balance + b.properties.reduce((s, id) => s + (propPriceMap[id] || 0), 0);
+        return worthB - worthA;
+      });
+      const winner = sorted[0];
+      const totalWorth = winner.balance + winner.properties.reduce((s, id) => s + (propPriceMap[id] || 0), 0);
+
+      const endedState: RoomState = {
+        ...roomState,
+        settings: {
+          ...roomState.settings,
+          gameStatus: 'ended'
+        }
+      };
+      onUpdateRoom(endedState);
+
+      setIsThinkingAI(true);
+      const commentary = await puterBanker.generateCommentary('GAME_WON', {
+        player: winner,
+        totalWorth,
+        roundNumber: roomState.settings.maxRounds
+      });
+      setIsThinkingAI(false);
+      announce(commentary.text, 'celebratory');
+      return;
+    }
 
     onUpdateRoom({
       ...roomState,
@@ -123,7 +172,22 @@ export const TabletHostView: React.FC<TabletHostViewProps> = ({
       roundNumber: newRound
     });
 
-    announce(`Turno de ${nextPlayer.name}. ¡Veamos qué te depara la suerte!`, 'celebratory');
+    if (isCompletingRound) {
+      soundFx.playPassGo();
+      // Round End AI Intelligence
+      const sortedByCash = [...roomState.players].sort((a, b) => b.balance - a.balance);
+      const leader = sortedByCash[0];
+
+      setIsThinkingAI(true);
+      const commentary = await puterBanker.generateCommentary('ROUND_END', {
+        player: leader,
+        roundNumber: newRound
+      });
+      setIsThinkingAI(false);
+      announce(commentary.text, 'celebratory');
+    } else {
+      announce(`Turno de ${nextPlayer.name}. ¡Veamos qué te depara la suerte!`, 'celebratory');
+    }
   };
 
   // Give $20,000 Salida
@@ -236,18 +300,46 @@ export const TabletHostView: React.FC<TabletHostViewProps> = ({
               <h1 className="text-xl font-bold tracking-tight text-white">Banquero de Mesa IA</h1>
               <span className="text-xs bg-amber-500/20 text-amber-300 font-semibold px-2 py-0.5 rounded-full border border-amber-500/30">Fotorama Edition</span>
             </div>
-            <p className="text-xs text-slate-400">Tablet Matriz de Sala • Ronda #{roomState.roundNumber}</p>
+            <p className="text-xs text-slate-400">
+              Tablet Matriz de Sala • Ronda #{roomState.roundNumber}
+              {roomState.settings.maxRounds && roomState.settings.maxRounds > 0 ? ` de ${roomState.settings.maxRounds}` : ' (Ilimitada)'}
+            </p>
           </div>
         </div>
 
-        {/* Room PIN & QR Button for mobile phones */}
-        <div className="flex items-center gap-3">
+        {/* Buttons: Pre-Game Edit / Lock, Room PIN & QR Button */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {!isGamePlaying ? (
+            <button
+              onClick={() => setShowSetupModal(true)}
+              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 px-3.5 py-2 rounded-xl text-xs font-black shadow-lg shadow-emerald-500/25 transition-all cursor-pointer animate-pulse"
+              title="Configura nombres, avatares, saldos a $0 y rondas antes de iniciar"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              <span>Edición antes del juego</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                if (confirm('La partida está en curso y los nombres y saldos iniciales están bloqueados.\n\n¿Deseas pausar o reiniciar para reconfigurar jugadores?')) {
+                  setShowSetupModal(true);
+                }
+              }}
+              className="flex items-center gap-1.5 bg-slate-950 border border-amber-500/30 text-amber-300 hover:bg-slate-800 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              title="Partida en curso: Edición bloqueada. Toca para pausar o reiniciar."
+            >
+              <Lock className="w-3.5 h-3.5 text-amber-400" />
+              <span>Edición Bloqueada</span>
+            </button>
+          )}
+
           <button
             onClick={() => setShowQrModal(true)}
-            className="flex items-center gap-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 px-4 py-2 rounded-xl font-black text-xs shadow-lg shadow-amber-500/20 transition-all cursor-pointer active:scale-95"
+            className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 px-3.5 py-2 rounded-xl font-black text-xs shadow-lg shadow-amber-500/20 transition-all cursor-pointer active:scale-95"
           >
             <QrCode className="w-4 h-4 text-slate-950" />
-            <span>Conectar Celulares (QR)</span>
+            <span className="hidden sm:inline">Conectar Celulares (QR)</span>
+            <span className="sm:hidden">QR</span>
           </button>
 
           <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-800 px-3 py-1.5 rounded-xl">
@@ -261,29 +353,80 @@ export const TabletHostView: React.FC<TabletHostViewProps> = ({
             title="Escanear casilla física o carta con la cámara de la tablet"
           >
             <Camera className="w-4 h-4 text-amber-400" />
-            <span className="hidden sm:inline">Cámara IA</span>
+            <span className="hidden md:inline">Cámara IA</span>
           </button>
-        </div>
 
-        {/* Voice and Puter AI Status */}
-        <div className="flex items-center gap-2">
+          {/* Voice and Puter AI Status */}
           <button 
             onClick={() => {
               const voiceOn = !roomState.settings.voiceEnabled;
               onUpdateRoom({ ...roomState, settings: { ...roomState.settings, voiceEnabled: voiceOn } });
               if (voiceOn) puterBanker.speak("Voz del banquero activada");
             }}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all border ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border ${
               roomState.settings.voiceEnabled 
                 ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-lg shadow-amber-500/10' 
                 : 'bg-slate-800 border-slate-700 text-slate-400'
             }`}
           >
-            {roomState.settings.voiceEnabled ? <Volume2 className="w-4 h-4 text-amber-400" /> : <VolumeX className="w-4 h-4" />}
-            <span>{roomState.settings.voiceEnabled ? 'Voz IA: ON' : 'Voz: Silencio'}</span>
+            {roomState.settings.voiceEnabled ? <Volume2 className="w-3.5 h-3.5 text-amber-400" /> : <VolumeX className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{roomState.settings.voiceEnabled ? 'Voz: ON' : 'Voz: OFF'}</span>
           </button>
         </div>
       </header>
+
+      {/* Pre-Game Callout Notice Banner (When game has not started yet) */}
+      {!isGamePlaying && (
+        <div className="bg-gradient-to-r from-emerald-950/50 via-slate-900 to-amber-950/40 border border-emerald-500/40 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 text-xl font-bold flex-shrink-0">
+              🛠️
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-black text-white">Fase de Preparación y Edición Previa</h4>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-mono px-2 py-0.5 rounded-full border border-emerald-500/30">
+                  Saldo Base: ${roomState.settings.initialBalance.toLocaleString()}
+                </span>
+                {roomState.settings.maxRounds && roomState.settings.maxRounds > 0 && (
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 font-mono px-2 py-0.5 rounded-full border border-amber-500/30">
+                    Modo {roomState.settings.maxRounds} Rondas
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Usa el botón <strong>"Edición antes del juego"</strong> para personalizar nombres, avatares, saldos iniciales (bajar a $0) y número de rondas. Una vez iniciada la partida, la edición quedará completamente bloqueada.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <button
+              onClick={() => setShowSetupModal(true)}
+              className="flex-1 md:flex-initial px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold text-xs rounded-xl border border-emerald-500/30 transition-all cursor-pointer text-center"
+            >
+              Configurar Cuentas
+            </button>
+            <button
+              onClick={() => {
+                soundFx.playPassGo();
+                onUpdateRoom({
+                  ...roomState,
+                  settings: {
+                    ...roomState.settings,
+                    gameStatus: 'playing'
+                  }
+                });
+                announce('¡Partida iniciada! La edición queda oficialmente bloqueada por el Banquero. ¡Ronda #1!', 'celebratory');
+              }}
+              className="flex-1 md:flex-initial px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Iniciar Partida</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Puter Banker Agent Live Dialogue Banner */}
       <div className="relative overflow-hidden bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 border-2 border-amber-500/30 rounded-2xl p-5 shadow-2xl">
@@ -626,6 +769,52 @@ export const TabletHostView: React.FC<TabletHostViewProps> = ({
             </button>
           </div>
         </div>
+      )}
+
+      {/* MODAL 3: PRE-GAME SETUP & CUSTOMIZATION MODAL */}
+      {showSetupModal && (
+        <PreGameSetupModal
+          roomState={roomState}
+          onClose={() => setShowSetupModal(false)}
+          onQuickSave={(newState) => {
+            onUpdateRoom(newState);
+          }}
+          onSaveAndStart={(newState) => {
+            onUpdateRoom(newState);
+            setShowSetupModal(false);
+            announce('¡Partida iniciada! La edición de nombres y saldos queda formalmente bloqueada. ¡Ronda #1!', 'celebratory');
+          }}
+        />
+      )}
+
+      {/* MODAL 4: GAME OVER CELEBRATION & WINNER CEREMONY */}
+      {isGameEnded && (
+        <GameOverModal
+          roomState={roomState}
+          onContinueExtraRounds={() => {
+            const extraRounds = (roomState.settings.maxRounds || roomState.roundNumber) + 5;
+            onUpdateRoom({
+              ...roomState,
+              settings: {
+                ...roomState.settings,
+                maxRounds: extraRounds,
+                gameStatus: 'playing'
+              }
+            });
+            announce(`¡Tiempo extra concedido! Jugaremos hasta la ronda #${extraRounds}. ¡A defender las propiedades!`, 'celebratory');
+          }}
+          onRestartNewGame={() => {
+            setShowSetupModal(true);
+            onUpdateRoom({
+              ...roomState,
+              roundNumber: 1,
+              settings: {
+                ...roomState.settings,
+                gameStatus: 'setup'
+              }
+            });
+          }}
+        />
       )}
     </div>
   );
