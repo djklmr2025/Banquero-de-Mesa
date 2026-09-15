@@ -14,5 +14,7 @@
 .externalNativeBuild
 .cxx
 local.properties
-.env
 debug.keystore
+node_modules/
+dist/
+.DS_Store
