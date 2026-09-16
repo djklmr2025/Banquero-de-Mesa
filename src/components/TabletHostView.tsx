@@ -10,6 +10,8 @@ import { soundFx } from '../services/soundService';
 import { puterBanker } from '../services/puterAgentService';
 import { PreGameSetupModal } from './PreGameSetupModal';
 import { GameOverModal } from './GameOverModal';
+import { ThreeDBoardStage } from './ThreeDBoardStage';
+import { VerticalPropertyCard } from './VerticalPropertyCard';
 
 interface TabletHostViewProps {
   roomState: RoomState;
@@ -603,14 +605,21 @@ export const TabletHostView: React.FC<TabletHostViewProps> = ({
                   <div
                     key={prop.id}
                     onClick={() => setSelectedPropertyId(prop.id)}
-                    className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                    className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden ${
                       selectedPropertyId === prop.id 
-                        ? 'border-amber-400 bg-slate-800' 
+                        ? 'border-amber-400 bg-slate-800 shadow-lg shadow-amber-500/10' 
                         : 'border-slate-800 bg-slate-950/50 hover:border-slate-700'
                     }`}
                   >
                     <div>
-                      <div className="h-2 rounded-full mb-2" style={{ backgroundColor: prop.color }}></div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="h-2 flex-1 rounded-full" style={{ backgroundColor: prop.color }}></div>
+                        {prop.image && (
+                          <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1 py-0.2 rounded font-bold font-mono">
+                            FOTO
+                          </span>
+                        )}
+                      </div>
                       <h4 className="font-bold text-xs text-white truncate">{prop.name}</h4>
                       <p className="text-xs text-amber-400 font-mono font-semibold">${prop.price.toLocaleString()}</p>
                     </div>
@@ -628,31 +637,60 @@ export const TabletHostView: React.FC<TabletHostViewProps> = ({
               })}
             </div>
 
-            {/* Selected Property Buy Action */}
+            {/* Selected Property Deed Inspection Card */}
             {selectedPropertyId && (
-              <div className="mt-4 p-4 bg-slate-950 border border-amber-500/40 rounded-xl flex items-center justify-between gap-4">
+              <div className="mt-4 p-4 bg-slate-950 border border-amber-500/40 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-5 shadow-2xl animate-in fade-in">
                 {(() => {
                   const p = roomState.properties.find(x => x.id === selectedPropertyId);
                   if (!p) return null;
+                  const owner = roomState.players.find(x => x.id === p.ownerId);
+                  const canBuy = !p.ownerId && currentPlayer.balance >= p.price;
+
                   return (
                     <>
-                      <div>
-                        <span className="text-xs text-slate-400">Comprar propiedad para {currentPlayer.name}:</span>
-                        <h4 className="text-base font-bold text-white">{p.name} - ${p.price.toLocaleString()}</h4>
+                      <div className="flex-1">
+                        <span className="text-xs text-slate-400 block mb-1">
+                          Escritura seleccionada para <strong>{currentPlayer.name}</strong>:
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-16 rounded-lg bg-slate-900 border border-slate-700 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                            {p.image ? (
+                              <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Building className="w-6 h-6 text-amber-400 opacity-60" />
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="text-base font-black text-white">{p.name}</h4>
+                            <div className="flex items-center gap-3 text-xs mt-0.5">
+                              <span className="text-amber-400 font-mono font-bold">${p.price.toLocaleString()}</span>
+                              <span>•</span>
+                              <span className="text-slate-300">Renta base: ${p.baseRent.toLocaleString()}</span>
+                              <span>•</span>
+                              <span className={owner ? 'text-amber-300' : 'text-emerald-400'}>
+                                {owner ? `Dueño: ${owner.name}` : 'Disponible'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
+
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
                         <button
                           onClick={() => setSelectedPropertyId(null)}
-                          className="px-3 py-2 text-xs font-semibold text-slate-400 hover:text-white"
+                          className="flex-1 sm:flex-initial px-4 py-2.5 text-xs font-semibold text-slate-400 hover:text-white"
                         >
-                          Cancelar
+                          Cerrar
                         </button>
-                        <button
-                          onClick={() => handleBuyProperty(p.id)}
-                          className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-all"
-                        >
-                          Comprar Ahora
-                        </button>
+                        {!p.ownerId && (
+                          <button
+                            onClick={() => handleBuyProperty(p.id)}
+                            disabled={!canBuy}
+                            className="flex-1 sm:flex-initial px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-40"
+                          >
+                            {canBuy ? `Comprar por $${p.price.toLocaleString()}` : 'Fondos Insuficientes'}
+                          </button>
+                        )}
                       </div>
                     </>
                   );
@@ -662,6 +700,13 @@ export const TabletHostView: React.FC<TabletHostViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* 3D BOARD STAGE AT THE BOTTOM OF THE TABLET */}
+      <ThreeDBoardStage
+        roomState={roomState}
+        onUpdateRoom={onUpdateRoom}
+        onSelectProperty={(id) => setSelectedPropertyId(id)}
+      />
 
       {/* MODAL 1: QR & PIN CONNECTION FOR ALL 8 PLAYERS */}
       {showQrModal && (

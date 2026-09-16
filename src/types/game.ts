@@ -22,6 +22,7 @@ export interface BoardProperty {
   ownerId: string | null;
   color: string;
   mortgaged: boolean;
+  image?: string; // Vertical property card image
 }
 
 export interface SurpriseCard {
@@ -73,6 +74,7 @@ export interface RoomState {
   properties: BoardProperty[];
   history: GameTransaction[];
   lastDialogue: BankerDialogue | null;
+  customBoardImage?: string; // Custom uploaded 3D board image / texture
   settings: {
     passGoSalary: number;
     initialBalance: number;
