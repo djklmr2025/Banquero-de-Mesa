@@ -2,27 +2,31 @@ import React, { useState } from 'react';
 import { 
   Dices, Volume2, VolumeX, Sparkles, Building, ArrowRight, RotateCcw, 
   Send, AlertTriangle, CheckCircle, Smartphone, Bot, QrCode, Camera, X, UserPlus,
-  SlidersHorizontal, Lock, Play, Trophy
+  SlidersHorizontal, Lock, Play, Trophy, Package
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { BankerDialogue, Player, RoomState, SurpriseCard } from '../types/game';
+import { BankerDialogue, Player, RoomState, SurpriseCard, ModPack } from '../types/game';
 import { soundFx } from '../services/soundService';
 import { puterBanker } from '../services/puterAgentService';
 import { PreGameSetupModal } from './PreGameSetupModal';
 import { GameOverModal } from './GameOverModal';
 import { ThreeDBoardStage } from './ThreeDBoardStage';
 import { VerticalPropertyCard } from './VerticalPropertyCard';
+import { PackSelectorModal } from './PackSelectorModal';
+import { modPackService } from '../services/modPackService';
 
 interface TabletHostViewProps {
   roomState: RoomState;
   onUpdateRoom: (newState: RoomState) => void;
   onSwitchToPlayer: (playerId: string) => void;
+  onOpenStudio?: () => void;
 }
 
 export const TabletHostView: React.FC<TabletHostViewProps> = ({
   roomState,
   onUpdateRoom,
-  onSwitchToPlayer
+  onSwitchToPlayer,
+  onOpenStudio
 }) => {
   const [isRolling, setIsRolling] = useState(false);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
@@ -32,6 +36,7 @@ export const TabletHostView: React.FC<TabletHostViewProps> = ({
   const [showQrModal, setShowQrModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [showSetupModal, setShowSetupModal] = useState(false);
+  const [showPackModal, setShowPackModal] = useState(false);
 
   const isGamePlaying = roomState.settings.gameStatus === 'playing';
   const isGameEnded = roomState.settings.gameStatus === 'ended';
@@ -336,6 +341,15 @@ export const TabletHostView: React.FC<TabletHostViewProps> = ({
           )}
 
           <button
+            onClick={() => setShowPackModal(true)}
+            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-bold border border-slate-700 transition-all cursor-pointer"
+            title="Cargar paquetes de juego completos (.fmpack o pre-cargados)"
+          >
+            <Package className="w-4 h-4 text-amber-400" />
+            <span className="hidden sm:inline">Packs de Juego</span>
+          </button>
+
+          <button
             onClick={() => setShowQrModal(true)}
             className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 px-3.5 py-2 rounded-xl font-black text-xs shadow-lg shadow-amber-500/20 transition-all cursor-pointer active:scale-95"
           >
@@ -397,12 +411,19 @@ export const TabletHostView: React.FC<TabletHostViewProps> = ({
                 )}
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
-                Usa el botón <strong>"Edición antes del juego"</strong> para personalizar nombres, avatares, saldos iniciales (bajar a $0) y número de rondas. Una vez iniciada la partida, la edición quedará completamente bloqueada.
+                Usa <strong>"Edición antes del juego"</strong> para personalizar o <strong>"Cargar Pack"</strong> para jugar con tableros y cartas temáticas.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <button
+              onClick={() => setShowPackModal(true)}
+              className="flex-1 md:flex-initial px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl border border-slate-700 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <Package className="w-3.5 h-3.5 text-amber-400" />
+              <span>Cargar Pack</span>
+            </button>
             <button
               onClick={() => setShowSetupModal(true)}
               className="flex-1 md:flex-initial px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold text-xs rounded-xl border border-emerald-500/30 transition-all cursor-pointer text-center"
@@ -858,6 +879,26 @@ export const TabletHostView: React.FC<TabletHostViewProps> = ({
                 gameStatus: 'setup'
               }
             });
+          }}
+        />
+      )}
+
+      {/* MODAL 5: PACK SELECTOR & MODPACK LOADER */}
+      {showPackModal && (
+        <PackSelectorModal
+          currentRoom={roomState}
+          onClose={() => setShowPackModal(false)}
+          onSelectPack={(pack) => {
+            const updated = modPackService.applyPackToRoom(pack, roomState);
+            onUpdateRoom(updated);
+            announce(`¡Paquete "${pack.name}" cargado a la mesa! Tablero, fichas, propiedades y billetes actualizados.`, 'celebratory');
+          }}
+          onOpenStudio={() => {
+            if (onOpenStudio) {
+              onOpenStudio();
+            } else if (typeof window !== 'undefined') {
+              window.location.href = '/studio';
+            }
           }}
         />
       )}

@@ -3,9 +3,9 @@ import { TabletHostView } from './components/TabletHostView';
 import { PlayerPocketWallet } from './components/PlayerPocketWallet';
 import { CreatorStudioView } from './components/CreatorStudioView';
 import { RoomState, ModPack } from './types/game';
-import { DEFAULT_PROPERTIES } from './data/defaultGameData';
 import { puterBanker } from './services/puterAgentService';
 import { Tablet, Smartphone, Palette } from 'lucide-react';
+import { modPackService } from './services/modPackService';
 
 const INITIAL_ROOM_STATE: RoomState = {
   roomId: 'FM-77',
@@ -155,15 +155,7 @@ export const App: React.FC = () => {
 
   // Handle ModPack apply from studio
   const handleApplyModPack = (pack: ModPack) => {
-    const updatedState: RoomState = {
-      ...roomState,
-      properties: pack.properties,
-      settings: {
-        ...roomState.settings,
-        currencyName: pack.currencyName,
-        currencySymbol: pack.currencySymbol
-      }
-    };
+    const updatedState = modPackService.applyPackToRoom(pack, roomState);
     handleUpdateRoom(updatedState);
     setCurrentView('host');
   };
@@ -223,6 +215,7 @@ export const App: React.FC = () => {
               setSelectedPlayerId(pId);
               setCurrentView('player');
             }}
+            onOpenStudio={() => setCurrentView('studio')}
           />
         )}
 

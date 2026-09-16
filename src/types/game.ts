@@ -23,6 +23,7 @@ export interface BoardProperty {
   color: string;
   mortgaged: boolean;
   image?: string; // Vertical property card image
+  description?: string; // Descriptive or thematic text
 }
 
 export interface SurpriseCard {
@@ -34,6 +35,9 @@ export interface SurpriseCard {
   targetPosition?: number;
   icon?: string;
   rarity?: 'comun' | 'rara' | 'trampa' | 'legendaria';
+  backgroundImage?: string; // Background image for luck/trap card
+  borderColor?: string;     // Custom border outline color
+  textColor?: string;       // Custom text color overlay
 }
 
 export interface BillTemplate {
@@ -92,9 +96,14 @@ export interface ModPack {
   name: string;
   author: string;
   version: string;
+  description?: string;
   currencyName: string;
   currencySymbol: string;
+  boardImage?: string;     // 3D board texture/image
+  playerSpins?: string[];  // Custom tokens/spins for players
   bills: BillTemplate[];
   properties: BoardProperty[];
   cards: SurpriseCard[];
+  isRelease?: boolean;     // Closed game release ready to play
+  updatedAt?: number;
 }
